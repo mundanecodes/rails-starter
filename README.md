@@ -214,7 +214,6 @@ GitHub Actions workflow includes:
 - Brakeman security scanning
 - RuboCop linting
 - PostgreSQL and Redis services
-- Parallel job execution
 
 ## Customization
 
