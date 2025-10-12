@@ -349,7 +349,8 @@ def configure_application
       generate.orm :active_record, primary_key_type: :uuid
     end
 
-    config.silence_healthcheck_path += ["/health", "/healthz", "/ping", "/status"]
+    config.silence_healthcheck_path = ["/health", "/healthz", "/ping", "/status"]
+    require "./app/middleware/block_robots"
     config.middleware.use BlockRobots
     RUBY
   end
