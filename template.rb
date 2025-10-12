@@ -29,7 +29,6 @@ def setup_gemfile
 
   gem "redis", ">= 4.0.1"
   gem "sidekiq"
-  gem "sidekiq-cron"
   gem "dalli"
   gem "httpx"
   gem "aws-sdk-s3"
@@ -585,14 +584,6 @@ def create_github_actions
 
             - name: Run tests
               run: bundle exec rspec --format documentation
-
-            - name: Upload coverage
-              if: always()
-              uses: actions/upload-artifact@v4
-              with:
-                name: coverage
-                path: coverage/
-                if-no-files-found: ignore
 
         scan_ruby:
           name: Security Scan
