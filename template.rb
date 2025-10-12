@@ -21,6 +21,14 @@ def setup_gemfile
     gem "rubocop-rails-omakase", require: false
     gem "standard", require: false
     gem "ruby-lsp", require: false
+    gem "debug", platforms: %i[mri windows], require: "debug/prelude"
+  end
+
+  gemfile_content = File.read("Gemfile")
+  if gemfile_content.match?(/turbo-rails|stimulus-rails/)
+    gem_group :development do
+      gem "hotwire-spark"
+    end
   end
 
   gem "redis", ">= 4.0.1"
