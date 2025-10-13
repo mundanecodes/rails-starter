@@ -12,10 +12,10 @@
 #     enum state: { created: 0, invited: 1, enrolled: 2, suspended: 3, terminated: 4 }
 #
 #     # Transition with guard and timestamp
-# transition :reactivate, from: [:suspended, :terminated], to: :enrolled, timestamp: true, guard: -> { eligible_for_reactivation? } do
-#   notify_employee_reactivated
-# end
+#     transition :reactivate, from: [:suspended, :terminated], to: :enrolled,
+#                timestamp: true, guard: :eligible_for_reactivation?
 #   end
+#
 module SimpleState
   extend ActiveSupport::Concern
 
@@ -34,6 +34,9 @@ module SimpleState
   end
 
   included do
+    class_attribute :simple_state_column, instance_writer: false
+    class_attribute :simple_state_transitions, instance_writer: false, default: {}
+
     # Performs a state transition
     #
     # @param to [Symbol] target state
@@ -47,7 +50,10 @@ module SimpleState
     # @raise [ActiveRecord::RecordInvalid] if update! fails
     def transition_state(to:, allowed_from:, event:, timestamp_field: nil, guard: nil, &block)
       allowed_from = Array(allowed_from).map(&:to_sym).freeze
-      current_state = public_send(self.class.simple_state_column).to_sym
+      current_state_value = public_send(self.class.simple_state_column)
+      fail_transition!(to:, from: nil, event:, outcome: :invalid) if current_state_value.nil?
+
+      current_state = current_state_value.to_sym
 
       fail_transition!(to:, from: current_state, event:, outcome: :invalid) unless allowed_from.include?(current_state)
 
@@ -93,7 +99,10 @@ module SimpleState
       return false unless transition
 
       allowed_from = Array(transition[:from]).map(&:to_sym)
-      current_state = public_send(self.class.simple_state_column).to_sym
+      current_state_value = public_send(self.class.simple_state_column)
+      return false if current_state_value.nil?
+
+      current_state = current_state_value.to_sym
       guard = transition[:guard]
 
       allowed_from.include?(current_state) &&
@@ -139,17 +148,23 @@ module SimpleState
   end
 
   class_methods do
-    attr_reader :simple_state_transitions, :simple_state_column
-
     # Sets the column used for state
     #
     # @param column_name [Symbol]
     def state_column(column_name)
-      @simple_state_column = column_name
+      self.simple_state_column = column_name
     end
 
-    def simple_state_transitions
-      @simple_state_transitions ||= {}
+    def validate_state_exists!(state)
+      return unless simple_state_column
+
+      enum_accessor = simple_state_column.to_s.pluralize
+      return unless respond_to?(enum_accessor)
+
+      valid_states = public_send(enum_accessor).keys.map(&:to_sym)
+      unless valid_states.include?(state.to_sym)
+        raise ArgumentError, "Invalid state :#{state} for #{simple_state_column}. Valid states: #{valid_states.join(", ")}"
+      end
     end
 
     # Defines a transition method
@@ -161,8 +176,13 @@ module SimpleState
     # @param guard [Symbol, Proc, nil] optional guard method/block
     # @yield block executed after state update
     def transition(name, to:, from:, timestamp: nil, guard: nil, &block)
-      @simple_state_transitions ||= {}
-      @simple_state_transitions[name.to_sym] = {to:, from:, timestamp:, guard:, block:}
+      # Validate that target and source states exist in the enum
+      validate_state_exists!(to)
+      Array(from).each { |state| validate_state_exists!(state) }
+
+      self.simple_state_transitions = simple_state_transitions.merge(
+        name.to_sym => {to:, from:, timestamp:, guard:, block:}.freeze
+      ).freeze
 
       define_method(name) do
         transition_state(
