@@ -382,6 +382,36 @@ def setup_production_config
   end
 end
 
+# Ask the user if they want to include SimpleState
+def setup_simple_state
+  use_simple_state = ask("Do you want to include SimpleState (lightweight state machine)? [y/N]")
+
+  return say("Skipping SimpleState.") unless use_simple_state.downcase.start_with?("y")
+
+  target_file = "app/lib/simple_state.rb"
+
+  if File.exist?(target_file)
+    overwrite = ask("#{target_file} already exists. Overwrite? [y/N]")
+    unless overwrite.downcase.start_with?("y")
+      return say("Skipping download to avoid overwriting existing file.")
+    end
+  end
+
+  # Download from GitHub raw file
+  get "https://raw.githubusercontent.com/mundanecodes/rails-starter/main/simple_state.rb", target_file
+
+  say "\n✅ SimpleState module downloaded to #{target_file}!"
+
+  say "\nQuick usage example:"
+  say "  class Employee < ApplicationRecord"
+  say "    include SimpleState"
+  say "    state_column :state"
+  say "    # Define transitions, e.g.:"
+  say "    # transition :reactivate, from: [:suspended, :terminated], to: :enrolled,"
+  say "    #            timestamp: true, guard: :eligible_for_reactivation?"
+  say "  end\n"
+end
+
 def create_docker_files
   create_file "docker-compose.yml" do
     <<~YAML
@@ -648,6 +678,7 @@ after_bundle do
   configure_application
   setup_development_config
   setup_production_config
+  setup_simple_state
   create_docker_files
   create_github_actions
 
