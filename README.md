@@ -1,6 +1,26 @@
 # Rails Starter Template
 
+[![Ruby](https://img.shields.io/badge/Ruby-3.3+-red.svg)](https://www.ruby-lang.org)
+[![Rails](https://img.shields.io/badge/Rails-8.1-red.svg)](https://rubyonrails.org)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Hacktoberfest](https://img.shields.io/badge/Hacktoberfest-friendly-blueviolet.svg)](https://hacktoberfest.com)
+
 A production-ready Rails 8.1 application template with modern tooling, UUID v7 primary keys, comprehensive testing setup, and Docker support.
+
+## Table of Contents
+
+- [Features](#features)
+- [Usage](#usage)
+- [Environment Variables](#environment-variables)
+- [UUID v7 Primary Keys](#uuid-v7-primary-keys)
+- [Testing](#testing)
+- [Sidekiq Web UI](#sidekiq-web-ui)
+- [Development URLs](#development-urls)
+- [Robot Blocking](#robot-blocking)
+- [CI/CD](#cicd)
+- [Customization](#customization)
+- [Tech Stack Summary](#tech-stack-summary)
+- [License](#license)
 
 ## Features
 
@@ -24,7 +44,7 @@ A production-ready Rails 8.1 application template with modern tooling, UUID v7 p
 - Performance optimizations (GC management, eager loading)
 
 ### HTTP & Storage
-- **HTTPX** modern HTTP/2 client
+- **HTTPX** - modern HTTP/2 client
 - **Active Storage** with AWS S3 support
 - Multi-environment storage configuration (local/test/S3)
 
@@ -46,7 +66,7 @@ A production-ready Rails 8.1 application template with modern tooling, UUID v7 p
 - Health check endpoint silencing
 - **Kamal** deployment configuration
 - **Brakeman** security scanning
-- **RuboCop** and **Standard** code linting
+- **RuboCop** and **StandardRb** code linting
 
 ### Configuration
 - **UTC timezone** (standard for Rails applications)
@@ -215,7 +235,7 @@ Remove or modify in production if you want SEO indexing.
 GitHub Actions workflow includes:
 - RSpec test suite
 - Brakeman security scanning
-- RuboCop and Standard linting
+- RuboCop and StandardRb linting
 - PostgreSQL and Redis services
 
 ## Customization
@@ -260,7 +280,7 @@ config.middleware.use BlockRobots
 | CI/CD | GitHub Actions |
 | Deployment | Kamal |
 | Security | Brakeman |
-| Linting | RuboCop + Standard |
+| Linting | RuboCop + StandardRb |
 
 ## License
 
