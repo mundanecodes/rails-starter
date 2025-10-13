@@ -1,10 +1,6 @@
 # Rails Application Template
 # Usage: rails new myapp -d postgresql -m template.rb
 
-def source_paths
-  [__dir__]
-end
-
 # Gemfile modifications
 def setup_gemfile
   # Remove comments and reorganize
