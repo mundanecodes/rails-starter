@@ -13,6 +13,7 @@ A production-ready Rails 8.1 application template with modern tooling, UUID v7 p
 - [Usage](#usage)
 - [Environment Variables](#environment-variables)
 - [UUID v7 Primary Keys](#uuid-v7-primary-keys)
+- [SimpleState](#simplestate)
 - [Testing](#testing)
 - [Sidekiq Web UI](#sidekiq-web-ui)
 - [Development URLs](#development-urls)
@@ -178,6 +179,89 @@ UUID v7 benefits:
 - Globally unique
 - Better for distributed systems
 - Database index-friendly
+
+## SimpleState
+
+A lightweight state machine module included with this template. Perfect for modeling workflows like user onboarding, order processing
+
+```ruby
+class Employee < ApplicationRecord
+  include SimpleState
+
+  state_column :status
+
+  enum status: {
+    created: "created",
+    invited: "invited",
+    enrolled: "enrolled",
+    suspended: "suspended",
+    terminated: "terminated"
+  }
+
+  # Basic transition
+  transition :invite, from: :created, to: :invited, timestamp: :invited_at
+
+  # Transition with guard
+  transition :enroll, from: :invited, to: :enrolled, timestamp: true,
+             guard: :valid_invitation?
+
+  # Transition with callback
+  transition :suspend, from: [:enrolled], to: :suspended do
+    NotificationMailer.suspension_notice(self).deliver_later
+  end
+
+  # Multiple source states
+  transition :reactivate, from: [:suspended, :terminated], to: :enrolled
+
+  private
+
+  def valid_invitation?
+    invited_at.present? && invited_at > 30.days.ago
+  end
+end
+```
+
+**Usage:**
+
+```ruby
+employee = Employee.create!(status: :created)
+employee.invite  # => transitions to :invited, sets invited_at
+employee.enroll  # => transitions to :enrolled if guard passes
+
+# Check if transition is allowed
+employee.can_transition?(:suspend)  # => true
+
+# Error handling
+begin
+  employee.invite  # raises SimpleState::TransitionError if invalid
+rescue SimpleState::TransitionError => e
+  # Handle invalid transition
+end
+```
+
+**Features:**
+- **Guards**: Prevent transitions unless conditions are met
+- **Timestamps**: Auto-update columns on transition (e.g., `invited_at`)
+- **Callbacks**: Execute code after successful transitions
+- **Events**: Publishes `ActiveSupport::Notifications` for all transitions
+- **Validation**: Ensures states exist in your enum at class load time
+
+**Events published:**
+
+Events follow the pattern: `{model_name}.{transition_name}.{outcome}`
+
+For example, the `invite` transition on `Employee` publishes:
+- `employee.invite.success` - Transition succeeded
+- `employee.invite.failed` - Update failed (validation, etc.)
+- `employee.invite.invalid` - Transition not allowed or guard failed
+
+Subscribe to events for logging, metrics, or side effects:
+
+```ruby
+ActiveSupport::Notifications.subscribe(/employee\..*\.success/) do |name, start, finish, id, payload|
+  Rails.logger.info "Employee #{payload[:record_id]} transitioned to #{payload[:to_state]}"
+end
+```
 
 ## Testing
 
