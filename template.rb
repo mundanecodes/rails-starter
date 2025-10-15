@@ -372,14 +372,6 @@ end
 
 def setup_production_config
   gsub_file "config/environments/production.rb", /# config.active_job.queue_adapter = :resque/, "config.active_job.queue_adapter = :sidekiq"
-
-  inject_into_file "config/environments/production.rb", after: "config.active_job.queue_adapter = :sidekiq\n" do
-    <<-RUBY
-
-  # Store uploaded files on AWS S3.
-  config.active_storage.service = :amazon
-    RUBY
-  end
 end
 
 # Ask the user if they want to include SimpleState
@@ -681,8 +673,6 @@ after_bundle do
   setup_simple_state
   create_docker_files
   create_github_actions
-
-  generate "active_storage:install"
 
   git :init
   git add: "."
