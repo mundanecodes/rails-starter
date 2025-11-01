@@ -3,79 +3,63 @@
 
 # Gemfile modifications
 def setup_gemfile
-  # Remove comments and reorganize
+  # Remove all comments (both standalone and inline)
   gsub_file "Gemfile", /^#.*\n/, ""
+  gsub_file "Gemfile", /\s+#.*$/, ""
 
-  # Add gems
-  gem_group :development, :test do
-    gem "dotenv-rails"
-    gem "factory_bot_rails"
-    gem "faker"
-    gem "rspec-rails", ">= 7.0.0"
-    gem "shoulda-matchers", ">= 6.0.0"
-    gem "webmock"
-    gem "database_cleaner-active_record"
-    gem "spring-commands-rspec"
-    gem "bundler-audit", require: false
-    gem "brakeman", require: false
-    gem "rubocop-rails-omakase", require: false
-    gem "standard", require: false
-    gem "ruby-lsp", require: false
-    gem "debug", platforms: %i[mri windows], require: "debug/prelude"
+  # Add production gems at the top, right after the source line
+  inject_into_file "Gemfile", after: /^source.+\n/ do
+    <<~RUBY
+
+      gem "redis", ">= 4.0.1"
+      gem "sidekiq"
+      gem "dalli"
+      gem "httpx"
+      gem "aws-sdk-s3"
+      gem "groupdate"
+      gem "pagy"
+      gem "phonelib"
+
+    RUBY
   end
 
+  # Add custom gems to the existing development/test group (before the closing 'end')
+  inject_into_file "Gemfile", before: /^end\n.*group :development do/ do
+    <<~RUBY
+      gem "dotenv-rails"
+      gem "factory_bot_rails"
+      gem "faker"
+      gem "rspec-rails", ">= 7.0.0"
+      gem "shoulda-matchers", ">= 6.0.0"
+      gem "webmock"
+      gem "database_cleaner-active_record"
+      gem "spring-commands-rspec"
+      gem "standard", require: false
+      gem "ruby-lsp", require: false
+    RUBY
+  end
+
+  # Add hotwire-spark to the existing development group if hotwire is present
   gemfile_content = File.read("Gemfile")
   if gemfile_content.match?(/turbo-rails|stimulus-rails/)
-    gem_group :development do
-      gem "hotwire-spark"
+    inject_into_file "Gemfile", after: /gem "web-console"\n/ do
+      <<~RUBY
+        gem "hotwire-spark"
+      RUBY
     end
   end
 
-  gem "redis", ">= 4.0.1"
-  gem "sidekiq"
-  gem "dalli"
-  gem "httpx"
-  gem "aws-sdk-s3"
-  gem "groupdate"
-  gem "pagy"
-  gem "phonelib"
+  # Clean up excessive blank lines (more than 1 consecutive blank line)
+  gsub_file "Gemfile", /\n{3,}/, "\n\n"
 end
 
 def setup_rspec
   generate "rspec:install"
 
-  # Configure rails_helper
-  inject_into_file "spec/rails_helper.rb", after: "Rails.root.glob('spec/support/**/*.rb').sort_by(&:to_s).each { |f| require f }\n" do
-    <<~RUBY
-
-      # Maintain test schema
-      begin
-        ActiveRecord::Migration.maintain_test_schema!
-      rescue ActiveRecord::PendingMigrationError => e
-        abort e.to_s.strip
-      end
-
-      RSpec.configure do |config|
-        config.fixture_paths = [Rails.root.join("spec/fixtures")]
-        config.use_transactional_fixtures = false
-        config.infer_spec_type_from_file_location!
-        config.filter_rails_from_backtrace!
-        config.include FactoryBot::Syntax::Methods
-
-        config.before(:suite) do
-          Rails.application.eager_load!
-        end
-      end
-
-      # Shoulda Matchers configuration
-      Shoulda::Matchers.configure do |config|
-        config.integrate do |with|
-          with.test_framework :rspec
-          with.library :rails
-        end
-      end
-    RUBY
-  end
+  # Copy our custom spec helper files from the template repository
+  get "https://raw.githubusercontent.com/mundanecodes/rails-starter/main/.rspec", ".rspec", force: true
+  get "https://raw.githubusercontent.com/mundanecodes/rails-starter/main/spec_helper.rb", "spec/spec_helper.rb", force: true
+  get "https://raw.githubusercontent.com/mundanecodes/rails-starter/main/rails_helper.rb", "spec/rails_helper.rb", force: true
 end
 
 def setup_database_cleaner
